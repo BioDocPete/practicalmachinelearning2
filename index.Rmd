@@ -6,27 +6,96 @@ output:
   html_document: default
   pdf_document: default
 ---
+### Synopsis
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+This project uses data from accelerometers on the belt, forearm, arm, and dumbell of 4 participants asked to perform barbell lifts correctly and incorrectly in 5 different ways. The data come from this source: http://groupware.les.inf.puc-rio.br/har. The goal is to predict the 5 different ways the participants performed the exercise, which is the 'classe' variable. The model is then used to predict 20 different test cases. 
+
+Before training the model, only accelerometer data were kept. Omitted were columns 1-7 that contained descriptive data. Also omitted were columns that were not the actual accelerometer data but were statistics generated from the accelerometer data.
+
+Random forests took too much computing time. Stochastic Gradient Boosting (gbm) with the train function in the caret package required less than an hour of computing time.
+
+The in-sample accuracy for the gbm model using 5-fold cross-validation was 0.9638197. The out-of-sample accuracy for predicting the validation set was 0.9558199.
+
+### Load libraries
+```{r load libraries, message=FALSE, warning=FALSE}
+library(caret); library(gbm); library(tidyverse)
 ```
 
-## R Markdown
+### Load data
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r dataload}
+training <- read.csv("pml-training.csv",
+               header=TRUE, check.names=TRUE, stringsAsFactors=F,
+               skip = 0, na.strings=c("","NA", "null"))
+testing <- read.csv("pml-testing.csv",
+               header=TRUE, check.names=TRUE, stringsAsFactors=F,
+               skip = 0, na.strings=c("","NA", "null"))
 ```
 
-## Including Plots
+### Preliminary data wrangling
+Remove variables that are almost all NAs (i.e., 19216/19622 NAs; ~98%) that are statistics of the sensor readings, while the readings themselves are the predictors. Also, removed the first 7 columns that are not sensor readings.
+```{r remove vars with mostly NAs and first seven columns}
+set.seed(333)
+# Training set: Remove mostly-NA variables from the 
+no.NA <- colSums(is.na(training)) # show columns with mostly NA (i.e., the calculated statistics)
+logical.no.NA <- no.NA==0 # make logical vector of columns to keep 
+training.no.NA <- training[,logical.no.NA] # selects all columns with zero NA
+training <- training.no.NA %>% select(-c(1:7)) # remove irrelevant variables
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+# From testing, remove columns that are mostly NA and unimportant (i.e., 1:7)
+no.NA <- colSums(is.na(testing)) # show columns that are mostly NA (i.e., the calculated statistics)
+logical.no.NA <- no.NA==0 # make logical vector of columns to keep 
+testing.no.NA <- testing[,logical.no.NA] # selects all columns with zero NA
+testing <- testing.no.NA %>% select(-c(1:7)) # remove irrelevant variables
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk so the R code that generated the plot is printed..HELLO222222Does it work yet?
+### Divide data into building and validation data sets
+```{r create building data and validation set}
+inBuild <- createDataPartition(y=training$classe, p=0.7 , list=FALSE )
+# the validation set
+validation <- training[-inBuild,] # validation has 0.3 of the data
+# build
+training.wo.validate <- training[inBuild,] # this is 0.7 of the data
+```
+
+### Train the model
+```{r train the model}
+# train the gbm model using Stochastic Gradient Boosting
+train_control <- trainControl('cv', 5) # set cross-validation
+mod.gbm <- train(classe~., method="gbm", trControl=train_control, data=training.wo.validate, verbose=FALSE)
+```
+
+### Look at the model results
+```{r look at model data}
+saveRDS(mod.gbm, "mod.gbm.rds")
+mod.gbm <- readRDS("mod.gbm.rds") # not running above lines to save time
+print(mod.gbm)
+```
+
+### Look at the variable importance
+```{r variable importance}
+mod.gbm.Imp <- varImp(mod.gbm, scale = FALSE)
+mod.gbm.Imp
+```
+
+### Use the model to predict 'classe' in the validation set
+```{r predict validation set classe}
+# predict the gbm model on validation set
+p.gbm <- predict(mod.gbm, newdata = validation)
+# Gives the gbm accuracy of the prediction (i.e., out-of-sample error)
+postResample(pred = p.gbm, obs = as.factor(validation$classe))
+# Here is another way to get prediction error in a way that is understandable
+equalPredictions <- (p.gbm==validation$classe) # percent correct predictions 
+AccuracyOfPrediction <- 1-(sum(equalPredictions==F)/sum(equalPredictions==T))
+AccuracyOfPrediction
+```
+
+### Predict 'classe' for the test cases
+```{r test case classe}
+# predict the gbm model on validation set
+p.gbm <- predict(mod.gbm, newdata = testing)
+p.gbm
+```
+
+
+

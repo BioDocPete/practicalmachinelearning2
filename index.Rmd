@@ -25,8 +25,9 @@ summary(cars)
 
 You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
+```{r pressure, echo=TRUE}
 plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk so the R code that generated the plot is printed..HELLO222222Does it work yet?
+<<<<<<< HEAD
+Note that the `echo = FALSE` parameter was added to the code chunk so the R code that generated the plot is printed..HELLO

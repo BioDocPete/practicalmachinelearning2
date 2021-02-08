@@ -3,7 +3,8 @@ title: "Practical Machine Learning Course Project2"
 author: "Peter D"
 date: "2/3/2021"
 output:
-  html_document: default
+  html_document: 
+    keep_md: yes
   pdf_document: default
 ---
 ### Synopsis
@@ -72,7 +73,6 @@ mod.gbm <- readRDS("mod.gbm.rds") # not running above lines to save time
 print(mod.gbm)
 ```
 
-<<<<<<< HEAD
 ### Look at the variable importance
 ```{r variable importance}
 mod.gbm.Imp <- varImp(mod.gbm, scale = FALSE)

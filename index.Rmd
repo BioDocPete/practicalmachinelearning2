@@ -72,6 +72,7 @@ mod.gbm <- readRDS("mod.gbm.rds") # not running above lines to save time
 print(mod.gbm)
 ```
 
+<<<<<<< HEAD
 ### Look at the variable importance
 ```{r variable importance}
 mod.gbm.Imp <- varImp(mod.gbm, scale = FALSE)
@@ -96,6 +97,3 @@ AccuracyOfPrediction
 p.gbm <- predict(mod.gbm, newdata = testing)
 p.gbm
 ```
-
-
-
